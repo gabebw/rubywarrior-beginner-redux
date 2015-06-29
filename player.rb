@@ -212,7 +212,7 @@ class Player
   def closest_enemy(direction)
     enemy_space = look(direction).detect(&:enemy?)
     if enemy_space
-      enemy_space.unit || NullEnemy.new
+      enemy_space.unit
     else
       NullEnemy.new
     end
