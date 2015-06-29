@@ -22,6 +22,9 @@ class Player
       rescue!
     elsif space_backward.captive?
       rescue! :backward
+    elsif facing_wall?
+      warrior.pivot!
+      add_state_with_new_health
     elsif ! current_state.checked_backward
       if space_backward.wall?
         finish_walking_backward
@@ -103,6 +106,10 @@ class Player
   def finish_resting
     current_state.resting = false
     play_turn(@warrior)
+  end
+
+  def facing_wall?
+    space.wall?
   end
 
   def space
