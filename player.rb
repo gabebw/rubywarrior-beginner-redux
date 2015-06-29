@@ -22,6 +22,9 @@ class Player
       rescue!
     elsif space_backward.captive?
       rescue! :backward
+    elsif space.stairs?
+      # If we're at the stairs, we don't care about health.
+      walk!
     elsif facing_wall?
       warrior.pivot!
       add_state_with_new_health
