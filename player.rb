@@ -1,4 +1,5 @@
-require "pp"
+require "pry"
+
 require "./state"
 
 class Player
@@ -35,6 +36,8 @@ class Player
       else
         walk! :backward
       end
+    elsif clear_shot_at_enemy?
+      shoot!
     elsif being_attacked_by_archer? && recently_rested?
       walk!
     elsif next_to_archer?
@@ -57,6 +60,19 @@ class Player
   end
 
   private
+
+  def clear_shot_at_enemy?
+    captive_index = look.map(&:captive?).index(true) || -1
+    empty_index = look.map(&:empty?).index(true) || 0
+    enemy_index = look.map(&:enemy?).index(true) || -1
+
+    enemy_index < captive_index || enemy_index > 0 && captive_index < 0
+  end
+
+  def shoot!
+    @warrior.shoot!
+    add_state_with_new_health
+  end
 
   def unhealthy?
     @warrior.health <= UNHEALTHY_CUTOFF
@@ -129,11 +145,15 @@ class Player
   end
 
   def previous_state
-    @states[-2]
+    @states[-2] || current_state
   end
 
   def add_state(options)
     @states << current_state.merge(options.merge(health: @warrior.health))
+  end
+
+  def look
+    @warrior.look
   end
 
   def add_state_with_new_health
