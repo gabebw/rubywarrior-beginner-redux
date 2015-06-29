@@ -3,6 +3,7 @@ require "./state"
 
 class Player
   MAX_HEALTH = 20
+  ARCHER = "a"
 
   def initialize
     initial_state = State.new(
@@ -18,22 +19,24 @@ class Player
     @warrior = warrior
 
     if space.captive?
-      add_same_state
-      warrior.rescue!
+      rescue!
     elsif space_backward.captive?
-      add_same_state
-      warrior.rescue! :backward
+      rescue! :backward
     elsif ! current_state.checked_backward
       if space_backward.wall?
         finish_walking_backward
       else
-        add_same_state
-        warrior.walk! :backward
+        walk! :backward
       end
-    elsif unhealthy?
-      if taking_damage?
-        add_same_state
-        warrior.walk! :backward
+    elsif being_attacked_by_archer? && recently_rested?
+      walk!
+    elsif next_to_archer?
+      # Handle the case where we're next to an archer separately,
+      # because backing away from them makes the warrior take a lot of damage.
+      attack!
+    elsif unhealthy? && ! being_attacked_by_archer?
+      if taking_damage? || space.enemy?
+        walk! :backward
       else
         rest!
       end
@@ -42,8 +45,7 @@ class Player
     elsif done_resting?
       finish_resting
     else
-      add_same_state
-      warrior.walk!
+      walk!
     end
   end
 
@@ -53,18 +55,32 @@ class Player
     @warrior.health < MAX_HEALTH
   end
 
+  def recently_rested?
+    @states.last(3).map(&:health).include?(MAX_HEALTH)
+  end
+
   def done_resting?
     current_state.resting && ! unhealthy?
   end
 
   def rest!
-    add_state(resting: true)
     @warrior.rest!
+    add_state(resting: true)
+  end
+
+  def rescue!(direction = :forward)
+    @warrior.rescue! direction
+    add_state_with_new_health
   end
 
   def attack!
-    add_state(attacking: true)
     @warrior.attack!
+    add_state(attacking: true)
+  end
+
+  def walk!(direction = :forward)
+    @warrior.walk! direction
+    add_state_with_new_health
   end
 
   def taking_damage?
@@ -72,7 +88,11 @@ class Player
   end
 
   def being_attacked_by_archer?
-    current_state.being_attacked_by_archer
+    taking_damage? && space.empty?
+  end
+
+  def next_to_archer?
+    space.enemy? && space.unit.character == ARCHER
   end
 
   def finish_walking_backward
@@ -81,7 +101,7 @@ class Player
   end
 
   def finish_resting
-    add_state(resting: false)
+    current_state.resting = false
     play_turn(@warrior)
   end
 
@@ -105,7 +125,7 @@ class Player
     @states << current_state.merge(options.merge(health: @warrior.health))
   end
 
-  def add_same_state
+  def add_state_with_new_health
     add_state(health: @warrior.health)
   end
 end
