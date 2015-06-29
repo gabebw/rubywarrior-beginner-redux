@@ -10,7 +10,6 @@ class Player
 
   def initialize
     initial_state = State.new(
-      attacking: false,
       resting: false,
       checked_backward: false,
       health: MAX_HEALTH,
@@ -116,7 +115,7 @@ class Player
 
   def attack!
     @warrior.attack!
-    add_state(attacking: true)
+    add_state_with_new_health
   end
 
   def walk!(direction = :forward)

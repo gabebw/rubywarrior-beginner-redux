@@ -1,7 +1,6 @@
 class State
 
   def initialize(options)
-    @attacking = options[:attacking]
     @checked_backward = options[:checked_backward]
     @health = options[:health]
     @resting = options[:resting]
@@ -21,7 +20,6 @@ class State
 
   def to_h
     {
-      attacking: @attacking,
       checked_backward: @checked_backward,
       health: @health,
       resting: @resting,
