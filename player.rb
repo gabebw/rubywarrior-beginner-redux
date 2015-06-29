@@ -4,6 +4,7 @@ require "./state"
 class Player
   MAX_HEALTH = 20
   ARCHER = "a"
+  UNHEALTHY_CUTOFF = MAX_HEALTH - 5
 
   def initialize
     initial_state = State.new(
@@ -58,7 +59,7 @@ class Player
   private
 
   def unhealthy?
-    @warrior.health < MAX_HEALTH
+    @warrior.health <= UNHEALTHY_CUTOFF
   end
 
   def recently_rested?
