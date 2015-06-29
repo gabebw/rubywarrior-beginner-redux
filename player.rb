@@ -11,7 +11,9 @@ class Player
     @warrior = warrior
     @health_this_turn = warrior.health
 
-    if unhealthy? && just_killed_something? && ! taking_damage?
+    if space.captive?
+      warrior.rescue!
+    elsif unhealthy? && just_killed_something? && ! taking_damage?
       rest!
     elsif space.enemy?
       attack!
