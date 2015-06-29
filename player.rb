@@ -1,10 +1,11 @@
 require "pry"
 
 require "./state"
+require "./null_enemy"
 
 class Player
   MAX_HEALTH = 20
-  ARCHER = "a"
+  ARCHER = "Archer"
   UNHEALTHY_CUTOFF = MAX_HEALTH - 5
 
   def initialize
@@ -30,14 +31,8 @@ class Player
     elsif facing_wall?
       warrior.pivot!
       add_state_with_new_health
-    elsif ! current_state.checked_backward
-      if space_backward.wall?
-        finish_walking_backward
-      else
-        walk! :backward
-      end
-    elsif clear_shot_at_enemy?
-      shoot!
+    elsif clear_shot_at_enemy?(:forward) || clear_shot_at_enemy?(:backward)
+      smartly_shoot_at_enemy!
     elsif being_attacked_by_archer? && recently_rested?
       walk!
     elsif next_to_archer?
@@ -52,6 +47,12 @@ class Player
       end
     elsif space.enemy?
       attack!
+    elsif ! current_state.checked_backward
+      if space_backward.wall?
+        finish_walking_backward
+      else
+        walk! :backward
+      end
     elsif done_resting?
       finish_resting
     else
@@ -61,16 +62,33 @@ class Player
 
   private
 
-  def clear_shot_at_enemy?
-    captive_index = look.map(&:captive?).index(true) || -1
-    empty_index = look.map(&:empty?).index(true) || 0
-    enemy_index = look.map(&:enemy?).index(true) || -1
+  def clear_shot_at_enemy?(direction)
+    captive_index = look(direction).map(&:captive?).index(true) || -1
+    empty_index = look(direction).map(&:empty?).index(true) || 0
+    enemy_index = look(direction).map(&:enemy?).index(true)
 
-    enemy_index < captive_index || enemy_index > 0 && captive_index < 0
+    if enemy_index
+      enemy_index < captive_index || enemy_index > 0 && captive_index < 0
+    end
   end
 
-  def shoot!
-    @warrior.shoot!
+  def smartly_shoot_at_enemy!
+    # Shoot at archers first, then shoot at the thing with more health
+    if closest_enemy(:forward).name == ARCHER
+      shoot! :forward
+    elsif closest_enemy(:backward).name == ARCHER
+      shoot! :backward
+    elsif closest_enemy(:forward).health > closest_enemy(:backward).health
+      shoot! :forward
+    elsif clear_shot_at_enemy?(:forward)
+      shoot! :forward
+    elsif clear_shot_at_enemy?(:backward)
+      shoot! :backward
+    end
+  end
+
+  def shoot!(direction = :forward)
+    @warrior.shoot! direction
     add_state_with_new_health
   end
 
@@ -144,6 +162,15 @@ class Player
     @states.last
   end
 
+  def closest_enemy(direction)
+    enemy_space = look(direction).detect(&:enemy?)
+    if enemy_space
+      enemy_space.unit || NullEnemy.new
+    else
+      NullEnemy.new
+    end
+  end
+
   def previous_state
     @states[-2] || current_state
   end
@@ -152,8 +179,8 @@ class Player
     @states << current_state.merge(options.merge(health: @warrior.health))
   end
 
-  def look
-    @warrior.look
+  def look(direction = :forward)
+    @warrior.look(direction)
   end
 
   def add_state_with_new_health
