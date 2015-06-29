@@ -3,12 +3,15 @@ class Player
 
   def initialize
     @attacking = false
+    @health_this_turn = MAX_HEALTH
+    @health_last_turn = MAX_HEALTH
   end
 
   def play_turn(warrior)
     @warrior = warrior
+    @health_this_turn = warrior.health
 
-    if unhealthy? && just_killed_something?
+    if unhealthy? && just_killed_something? && ! taking_damage?
       rest!
     elsif space.enemy?
       attack!
@@ -18,6 +21,8 @@ class Player
     else
       warrior.walk!
     end
+
+    @health_last_turn = warrior.health
   end
 
   private
@@ -42,6 +47,10 @@ class Player
   def attack!
     @attacking = true
     @warrior.attack!
+  end
+
+  def taking_damage?
+    @health_this_turn < @health_last_turn
   end
 
   def space
