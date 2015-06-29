@@ -20,46 +20,87 @@ class Player
   def play_turn(warrior)
     @warrior = warrior
 
+    rescue_captive ||
+      walk_toward_stairs ||
+      pivot_away_from_wall ||
+      shoot_at_enemy ||
+      walk_toward_archer_if_rested ||
+      attack_nearby_archer ||
+      safely_rest ||
+      attack_enemy ||
+      explore_backward ||
+      finish_resting ||
+      walk!
+  end
+
+  private
+
+  def rescue_captive
     if space.captive?
       rescue!
     elsif space_backward.captive?
       rescue! :backward
-    elsif space.stairs?
+    end
+  end
+
+  def walk_toward_stairs
+    if space.stairs?
       # If we're at the stairs, we don't care about health.
       walk!
-    elsif facing_wall?
-      warrior.pivot!
-      add_state_with_new_health
-    elsif clear_shot_at_enemy?(:forward) || clear_shot_at_enemy?(:backward)
+    end
+  end
+
+  def pivot_away_from_wall
+    if facing_wall?
+      pivot!
+    end
+  end
+
+  def shoot_at_enemy
+    if clear_shot_at_enemy?(:forward) || clear_shot_at_enemy?(:backward)
       smartly_shoot_at_enemy!
-    elsif being_attacked_by_archer? && recently_rested?
+    end
+  end
+
+  def walk_toward_archer_if_rested
+    if being_attacked_by_archer? && recently_rested?
       walk!
-    elsif next_to_archer?
+    end
+  end
+
+  def attack_nearby_archer
+    if next_to_archer?
       # Handle the case where we're next to an archer separately,
       # because backing away from them makes the warrior take a lot of damage.
       attack!
-    elsif unhealthy? && ! being_attacked_by_archer?
+    end
+  end
+
+  def safely_rest
+    if unhealthy? && ! being_attacked_by_archer?
       if taking_damage? || space.enemy?
         walk! :backward
       else
         rest!
       end
-    elsif space.enemy?
+    end
+  end
+
+  def attack_enemy
+    if space.enemy?
       attack!
-    elsif ! current_state.checked_backward
+    end
+  end
+
+  def explore_backward
+    if ! current_state.checked_backward
       if space_backward.wall?
         finish_walking_backward
       else
         walk! :backward
       end
-    elsif done_resting?
-      finish_resting
-    else
-      walk!
     end
   end
-
-  private
 
   def clear_shot_at_enemy?(direction)
     captive_index = look(direction).map(&:captive?).index(true) || -1
@@ -123,6 +164,11 @@ class Player
     add_state_with_new_health
   end
 
+  def pivot!
+    @warrior.pivot!
+    add_state_with_new_health
+  end
+
   def taking_damage?
     current_state.health < previous_state.health
   end
@@ -141,8 +187,10 @@ class Player
   end
 
   def finish_resting
-    current_state.resting = false
-    play_turn(@warrior)
+    if done_resting?
+      current_state.resting = false
+      play_turn(@warrior)
+    end
   end
 
   def facing_wall?
